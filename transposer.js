@@ -1,145 +1,184 @@
-var roots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-var notesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-var notesFlats = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
-var notesNatural = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
-var numberOfNotes = roots.length;
-var octaveOffset = 1;
+function Transposer() {
+  this.roots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  this.notesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  this.notesFlats = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+  this.notesNatural = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+  this.numberOfNotes = this.roots.length;
+  this.octaveOffset = 1;
+  this.defaultBPitch = 2;
+  this.defaultNonBPitch = 3;
 
-var midiNumberToNote = function(midiNumber, noteSet) {
-  var octave = Math.floor(midiNumber / numberOfNotes) - octaveOffset;
-  var root = midiNumber % numberOfNotes;
-  return noteSet[root] + octave;
-};
+  this.midiNumberToNote = function(midiNumber, noteSet) {
+    var octave = Math.floor(midiNumber / this.numberOfNotes) - this.octaveOffset;
+    var root = midiNumber % this.numberOfNotes;
+    return noteSet[root] + octave;
+  };
 
-// NOTE: This function expects that note be capitalized and be
-// properly sanitized and free of errors.
-var noteToMidiNumber = function(noteString) {
-  var noteParsed = noteString.match(/([A-G])(##|#|bb|b)?(-)?([0-9]+)?/);
+  // NOTE: This function expects that note be capitalized and be
+  // properly sanitized and free of errors.
+  this.noteToMidiNumber = function(noteString) {
+    var noteParsed = noteString.match(/([A-G])(##|#|bb|b)?(-)?([0-9]+)?/);
 
-  var note = noteParsed[1];
-  var pitchOffset = 0;
+    var note = noteParsed[1];
+    var pitchOffset = 0;
 
-  var sharp = noteParsed[2] === "#";
-  var doubleSharp = noteParsed[2] === "##";
-  var flat = noteParsed[2] === "b";
-  var doubleFlat = noteParsed[2] === "bb";
+    var sharp = noteParsed[2] === "#";
+    var doubleSharp = noteParsed[2] === "##";
+    var flat = noteParsed[2] === "b";
+    var doubleFlat = noteParsed[2] === "bb";
 
-  if (sharp) {
-    pitchOffset++;
-  } else if (doubleSharp) {
-    pitchOffset += 2;
-  } else if (flat) {
-    pitchOffset--;
-  } else if (doubleFlat) {
-    pitchOffset -= 2;
-  }
+    if (sharp) {
+      pitchOffset++;
+    } else if (doubleSharp) {
+      pitchOffset += 2;
+    } else if (flat) {
+      pitchOffset--;
+    } else if (doubleFlat) {
+      pitchOffset -= 2;
+    }
 
-  var negativeOctave = noteParsed[3];
-  var octave = noteParsed[4] ? parseInt(noteParsed[4]) : -1;
+    var negativeOctave = noteParsed[3];
+    var octave = noteParsed[4] ? parseInt(noteParsed[4]) : -1;
 
-  if (negativeOctave) {
-    octave = parseInt(negativeOctave + octave);
-  }
+    if (negativeOctave) {
+      octave = parseInt(negativeOctave + octave);
+    }
 
-  var root = notesNatural.indexOf(note);
+    var root = this.notesNatural.indexOf(note);
 
-  return root + pitchOffset + (octave + octaveOffset) * numberOfNotes;
-};
+    return root + pitchOffset + (octave + this.octaveOffset) * this.numberOfNotes;
+  };
 
-var parseScaleString = function(scaleString) {
-  // Remove invalid characters
-  var sanitizedInput = scaleString.replace(/[^A-Ga-g0-9#, ]+/g, '');
+  this.parseScaleString = function(scaleString) {
+    // Remove invalid characters
+    var sanitizedInput = scaleString.replace(/[^A-Ga-g0-9#, ]+/g, '');
 
-  // Capitalize notes and lowercase flat symbols
-  sanitizedInput = sanitizedInput.toUpperCase().replace(/([A-G])B+/g, '$1b');
+    // Capitalize notes and lowercase flat symbols
+    sanitizedInput = sanitizedInput.toUpperCase().replace(/([A-G])B+/g, '$1b');
 
-  // Replace consecutive commas and spaces with single spaces
-  sanitizedInput = sanitizedInput.replace(/[,\s]+/g, ' ');
+    // Replace consecutive commas and spaces with single spaces
+    sanitizedInput = sanitizedInput.replace(/[,\s]+/g, ' ');
 
-  // Guess octave numbers if no octave numbers are present
+    return sanitizedInput.split(' ');
+  };
 
-  // Are octave numbers present?
-  // There should be an integer at first character. 
-  // Choose "2" as the first octave.
-  // Successively add octaves. How? 
+  this.checkOctaveNumbers = function(notes) {
+    var hasOctaveNumbers = /\d/.test(notes[0]);
 
-  return sanitizedInput.split(' ');
-};
+    if (hasOctaveNumbers) {
+      return notes;
+    }
+    else {
+      var currentOctave = this.defaultNonBPitch;
+      var notesAtOctave = [];
 
-var scaleStringToMidiNumbers = function(scaleString) {
-  console.log(scaleString);
-  var scale = parseScaleString(scaleString);
-  console.log(scale);
-  var numbers = [];
+      if (notes[0] === "B") {
+        currentOctave = this.defaultBPitch;
+      }
 
-  for (var i = 0; i < scale.length; i++) {
-    numbers.push(noteToMidiNumber(scale[i]));
-  }
+      for (var i = 0; i < notes.length; i++) {
+        var note = notes[i];
 
-  return numbers;
-};
+        if (notesAtOctave.indexOf(note) !== -1) {
+          currentOctave += 1;
+          notesAtOctave = [];
+        }
 
-var transposeMidiNumbers = function(numbers, offset) {
-  var result = [];
+        notes[i] = note + currentOctave.toString();
+        notesAtOctave.push(note);
+      }
 
-  for (var i = 0; i < numbers.length; i++) {
-    result[i] = numbers[i] + offset;
-  }
+      return notes;
+    }
+  };
 
-  return result;
-};
+  this.scaleStringToMidiNumbers = function(scaleString) {
+    var scale = this.parseScaleString(scaleString);
+    scale = this.checkOctaveNumbers(scale);
+    var numbers = [];
 
-var midiNumbersToScaleString = function(midiNumbers, noteSet) {
-  var result = [];
+    for (var i = 0; i < scale.length; i++) {
+      numbers.push(this.noteToMidiNumber(scale[i]));
+    }
 
-  for (var i = 0; i < midiNumbers.length; i++) {
-    result[i] = midiNumberToNote(midiNumbers[i], noteSet);
-  }
+    return numbers;
+  };
 
-  return result.join(" ");
-};
+  this.transposeMidiNumbers = function(numbers, offset) {
+    var result = [];
 
-var transposedScales = function(scaleString, noteSet) {
-  var notes = parseScaleString(scaleString);
-  var numbers = scaleStringToMidiNumbers(scaleString);
-  var scales = [];
-  var scaleNumbersTransposed;
-  var scaleTransposed;
+    for (var i = 0; i < numbers.length; i++) {
+      result[i] = numbers[i] + offset;
+    }
 
-  for (var i = 0; i < numberOfNotes; i++) {
-    scaleNumbersTransposed = transposeMidiNumbers(numbers, i);
-    scaleTransposed = midiNumbersToScaleString(scaleNumbersTransposed, noteSet);
-    console.log(scaleTransposed);
+    return result;
+  };
 
-    scales.push(scaleTransposed);
-  }
+  this.midiNumbersToScaleString = function(midiNumbers, noteSet) {
+    var result = [];
 
-  return scales;
-};
+    for (var i = 0; i < midiNumbers.length; i++) {
+      result[i] = this.midiNumberToNote(midiNumbers[i], noteSet);
+    }
 
-var test = function() {
-  var numbers = [0, 1, 2, 3, 4, 12, 27, 48, 49, 60];
-  var i;
+    return result.join(", ");
+  };
 
-  for (i = 0; i < numbers.length; i++) {
-    var number = numbers[i];
-    //console.log(number, midiNumberToNote(number, notesSharps));
-  }
+  this.checkOctaveRange = function(midiNumbers) {
+    // If first midi number is greater than 58 (A#)
+    // Subtract 12 (octave) from all notes
+    // TODO: Replace magic number
+    console.log("midiNumbers", midiNumbers);
+    if (midiNumbers[0] > 58) {
+      for (var i = 0; i < midiNumbers.length; i++) {
+        midiNumbers[i] -= this.numberOfNotes;
+      }
+    }
 
-  var scale = ["C4", "C-1", "C#1", "Ebb5", "B11", "D##-1", "A", "E#"];
+    return midiNumbers;
+  };
 
-  for (i = 0; i < scale.length; i++) {
-    var note = scale[i];
-    var midiNumber = noteToMidiNumber(note);
-      //console.log(note, midiNumber);
-  }
+  this.transposedScales = function(scaleString, noteSet) {
+    var numbers = this.scaleStringToMidiNumbers(scaleString);
+    var scales = [];
+    var transposedScaleNumbers = [];
+    var scaleNumbersTransposed;
+    var scaleTransposed;
 
-  //console.log(noteToMidiNumber('C4'));
-  //console.log(parseScaleString("Ab, B#, Z, F; G# - E5 (*&(*, Eb5"));
+    for (var i = 0; i < this.numberOfNotes; i++) {
+      scaleNumbersTransposed = this.transposeMidiNumbers(numbers, i);
+      scaleNumbersTransposed = this.checkOctaveRange(scaleNumbersTransposed);
 
-  //console.log(transposedScales("C2, G2, C3, E3, G3, A3, B3, C4", notesSharps));
+      transposedScaleNumbers.push(scaleNumbersTransposed);
+    }
 
-  console.log(transposedScales("C, G, C, E, G, A, B, C", notesSharps));
-};
+    transposedScaleNumbers.sort();
 
-test();
+    for (i = 0; i < transposedScaleNumbers.length; i++) {
+      scaleTransposed = this.midiNumbersToScaleString(transposedScaleNumbers[i], noteSet);
+      scales.push(scaleTransposed);
+    }
+
+    return scales;
+  };
+
+  this.test = function() {
+    var numbers = [0, 1, 2, 3, 4, 12, 27, 48, 49, 60];
+    var i;
+
+    for (i = 0; i < numbers.length; i++) {
+      var number = numbers[i];
+    }
+
+    var scale = ["C4", "C-1", "C#1", "Ebb5", "B11", "D##-1", "A", "E#"];
+
+    for (i = 0; i < scale.length; i++) {
+      var note = scale[i];
+      var midiNumber = this.noteToMidiNumber(note);
+    }
+
+    console.log(this.transposedScales("C, G, C, E, G, A, B, C", this.notesSharps));
+    console.log(this.transposedScales("B, F#, B, D#, F#, G#, A#, B, C#", this.notesSharps));
+    console.log(this.transposedScales("C, G, G, E, G, A, B, C, D, E, F, G, A#, Bb, C", this.notesSharps));
+  };
+}
