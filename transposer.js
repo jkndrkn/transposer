@@ -7,6 +7,7 @@ function Transposer() {
   this.octaveOffset = 1;
   this.defaultBPitch = 2;
   this.defaultNonBPitch = 3;
+  this.aSharp2 = 58;
 
   this.midiNumberToNote = function(midiNumber, noteSet) {
     var octave = Math.floor(midiNumber / this.numberOfNotes) - this.octaveOffset;
@@ -59,7 +60,19 @@ function Transposer() {
     // Replace consecutive commas and spaces with single spaces
     sanitizedInput = sanitizedInput.replace(/[,\s]+/g, ' ');
 
-    return sanitizedInput.split(' ');
+    var notes = sanitizedInput.split(' ');
+
+    // Remove empty values added by bug on live site.
+    // TODO: Simplify below code.
+    var len = notes.length, i;
+
+    for (i = 0; i < len; i++) {
+      if (notes[i]) {
+        notes.push(notes[i]);  // copy non-empty values to the end of the array
+      }
+    }
+
+    return notes.splice(0 , len);
   };
 
   this.checkOctaveNumbers = function(notes) {
@@ -127,9 +140,7 @@ function Transposer() {
   this.checkOctaveRange = function(midiNumbers) {
     // If first midi number is greater than 58 (A#)
     // Subtract 12 (octave) from all notes
-    // TODO: Replace magic number
-    console.log("midiNumbers", midiNumbers);
-    if (midiNumbers[0] > 58) {
+    if (midiNumbers[0] > this.aSharp2) {
       for (var i = 0; i < midiNumbers.length; i++) {
         midiNumbers[i] -= this.numberOfNotes;
       }
