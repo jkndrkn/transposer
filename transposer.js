@@ -83,7 +83,10 @@ function Transposer() {
     }
     else {
       var currentOctave = this.defaultNonBPitch;
-      var notesAtOctave = [];
+
+      // Since notes[0] do not have octave numbers, these all have the
+      // same relative octave.
+      var currentMidiNumber = this.noteToMidiNumber(notes[0]);
 
       if (notes[0] === "B") {
         currentOctave = this.defaultBPitch;
@@ -91,14 +94,17 @@ function Transposer() {
 
       for (var i = 0; i < notes.length; i++) {
         var note = notes[i];
+        var newMidiNumber = this.noteToMidiNumber(note);
 
-        if (notesAtOctave.indexOf(note) !== -1) {
-          currentOctave += 1;
-          notesAtOctave = [];
+        // Any time a new note has a lower value than the current
+        // note, it has to be up an octave.
+        if (newMidiNumber <= currentMidiNumber) {
+          currentOctave++;
         }
 
+        currentMidiNumber = newMidiNumber;
+
         notes[i] = note + currentOctave.toString();
-        notesAtOctave.push(note);
       }
 
       return notes;
