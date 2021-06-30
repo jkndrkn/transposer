@@ -39,6 +39,10 @@ D#3, A#3, D#4, G4, A#4, C5, D5, D#5
 E3, B3, E4, G#4, B4, C#5, D#5, E5
 ```
 
+These scales are given using [scientific pitch notation](https://en.wikipedia.org/wiki/Scientific_pitch_notation).
+
 ## Demo
 
 Open `./index.html` in your browser to see a demo. This demo makes use of AngularJS.
+
+## Un
