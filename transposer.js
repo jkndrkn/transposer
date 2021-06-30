@@ -15,8 +15,8 @@ function Transposer() {
     return noteSet[root] + octave;
   };
 
-  // NOTE: This function expects that note be capitalized and be
-  // properly sanitized and free of errors.
+  // NOTE: This function expects that the note is capitalized,
+  // properly sanitized, and free of errors.
   this.noteToMidiNumber = function(noteString) {
     var noteParsed = noteString.match(/([A-G])(##|#|bb|b)?(-)?([0-9]+)?/);
 
